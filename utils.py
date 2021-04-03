@@ -6,8 +6,8 @@ import pandas as pd
 import numpy as np
 
 
-def get_nested_urls(self):
-    root_url = "http://sasscalweathernet.org/index.php"
+def get_nested_urls():
+    root_url = "http://sasscalweathernet.org"
     print(f"Requesting {root_url}...", end=' ')
     res = requests.get(root_url)
 
@@ -32,14 +32,56 @@ def get_nested_urls(self):
                     link.attrs['href'] for link in links
                 )
                 sub_urls = dict(
-                    info_url=f"{root_url}/{links[0]}",
-                    hourly_url=f"{root_url}/{links[1]}",
-                    daily_url=f"{root_url}/{links[2]}",
-                    monthly_url=f"{root_url}/{links[3]}",
-                    data_url=f"{root_url}/{links[4]}"
+                    infoUrl=f"{root_url}/{links[0]}",
+                    hourlyUrl=f"{root_url}/{links[1]}",
+                    dailyUrl=f"{root_url}/{links[2]}",
+                    monthlyUrl=f"{root_url}/{links[3]}",
+                    dataUrl=f"{root_url}/{links[4]}"
                 )
                 nested_urls[country][province] = sub_urls
         return nested_urls
     else:
         print(f"[{res.status_code}] request failed!")
         return None
+
+
+def fetch_and_save_input_files(nested_urls, freq='dailyUrl'):
+    for i, country in enumerate(nested_urls.keys()):
+        for j, province in enumerate(nested_urls[country].keys()):
+            path = os.path.dirname(os.path.realpath(__file__))
+            path = os.path.join(
+                path, f"input_data/{country}/{province}/{freq.upper()}"
+            )
+            if not os.path.exists(path):
+                os.makedirs(path)
+            nest_url = nested_urls[country][province][freq]
+
+            res = requests.get(nest_url)
+            print(f"Requesting {nest_url}", end=' ')
+            if res.status_code == 200:
+                print(f"[{res.status_code}] request successfully...")
+
+                soup = BeautifulSoup(res.text, 'html.parser')
+                options = soup.select('#formular_search')[0].find_all('option')
+                sid = nest_url.split('=')[-1]
+                params = ''
+
+                for k, option in enumerate(options):
+                    year, month = option.attrs['value'].split('-')
+                    param = f'{sid} {year} {month}'
+                    if k < len(options):
+                        params += f"{param}\n"
+                    else:
+                        params += f"{param}"
+            else:
+                print(f"[{res.status_code}] request failed!")
+            filename = os.path.join(path, f"{freq.upper()}-{sid}.in")
+            with open(filename, 'w') as handle:
+                handle.write(params)
+            print(f"File for {freq} {province} - {country} saved in {filename}")
+
+
+if __name__ == "__main__":
+    nest_urls = get_nested_urls()
+
+    fetch_and_save_input_files(nest_urls)
