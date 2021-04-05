@@ -64,12 +64,28 @@ def fetch_and_save_input_files(nested_urls, freq='dailyUrl'):
                 params = ''
 
                 for k, option in enumerate(options):
-                    year, month = option.attrs['value'].split('-')
-                    param = f'{sid} {year} {month}'
-                    if k < len(options):
-                        params += f"{param}\n"
-                    else:
-                        params += f"{param}"
+                    print(option)
+                    if freq == 'hourlyUrl':
+                        year, month, day = option.attrs['value'].split('-')
+                        param = f'{country}${province}${sid}${year}${month}${day}'
+                        if k < len(options):
+                            params += f"{param}\n"
+                        else:
+                            params += f"{param}"
+                    elif freq == 'dailyUrl':
+                        year, month = option.attrs['value'].split('-')
+                        param = f'{country}${province}${sid}${year}${month}'
+                        if k < len(options):
+                            params += f"{param}\n"
+                        else:
+                            params += f"{param}"
+                    elif freq == 'monthlyUrl':
+                        year = option.attrs['value']
+                        param = f'{country}${province}${sid}${year}'
+                        if k < len(options):
+                            params += f"{param}\n"
+                        else:
+                            params += f"{param}"
             else:
                 print(f"[{res.status_code}] request failed!")
             filename = os.path.join(path, f"{freq.upper()}-{sid}.in")
@@ -79,6 +95,8 @@ def fetch_and_save_input_files(nested_urls, freq='dailyUrl'):
 
 
 if __name__ == "__main__":
-    nest_urls = get_nested_urls()
+    # Change temporal resolution: hourlyUrl, dailyUrl or monthlyUrl
+    frequency = 'hourlyUrl'
 
-    fetch_and_save_input_files(nest_urls)
+    nest_urls = get_nested_urls()
+    fetch_and_save_input_files(nest_urls, freq=frequency)
